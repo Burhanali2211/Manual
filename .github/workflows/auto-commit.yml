@@ -1,27 +1,34 @@
 name: Auto Commit
 
 on:
-  schedule:
-    - cron: '0 0 * * *' # Runs every day at midnight UTC
-  workflow_dispatch: # Allows manual trigger for testing
+  push:
+    branches:
+      - main
 
 jobs:
-  commit:
+  auto-commit:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3 # Updated to latest version
+        uses: actions/checkout@v2
 
-      - name: Make changes
-        run: echo "Log file updated at $(date)" >> log.txt
-
-      - name: Commit changes
+      - name: Configure git
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Add log file
+        run: |
+          echo "Log entry $(date)" >> log.txt
           git add log.txt
-          git commit -m "Automated commit: $(date)" || exit 0 # Prevents failure if no changes
-          git push
+
+      - name: Commit changes
+        run: git commit -m "Automated commit: $(date)" || exit 0
+
+      - name: Push changes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Provided by GitHub Actions
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:main
